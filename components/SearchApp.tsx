@@ -10,6 +10,7 @@ import {
   useMap,
 } from "@vis.gl/react-google-maps";
 import type { Place, SearchResponse } from "@/lib/types";
+import MapHud from "./MapHud";
 
 const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID";
@@ -49,9 +50,11 @@ function Status({ place }: { place: Place }) {
 function ViewportController({
   places,
   selected,
+  fitKey,
 }: {
   places: Place[];
   selected: Place | null;
+  fitKey: number;
 }) {
   const map = useMap();
 
@@ -60,7 +63,7 @@ function ViewportController({
     const bounds = new google.maps.LatLngBounds();
     places.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
     map.fitBounds(bounds, 64);
-  }, [map, places]);
+  }, [map, places, fitKey]);
 
   useEffect(() => {
     if (map && selected) map.panTo({ lat: selected.lat, lng: selected.lng });
@@ -75,12 +78,14 @@ export default function SearchApp() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [fitKey, setFitKey] = useState(0);
 
   const places = useMemo(() => result?.places ?? [], [result]);
   const selected = useMemo(
     () => places.find((p) => p.id === selectedId) ?? null,
     [places, selectedId],
   );
+  const selectedIndex = selected ? places.indexOf(selected) : -1;
 
   async function run(query: string) {
     const text = query.trim();
@@ -217,7 +222,11 @@ export default function SearchApp() {
                 streetViewControl={false}
                 fullscreenControl={false}
               >
-                <ViewportController places={places} selected={selected} />
+                <ViewportController
+                  places={places}
+                  selected={selected}
+                  fitKey={fitKey}
+                />
                 {places.map((p) => (
                   <AdvancedMarker
                     key={p.id}
@@ -274,6 +283,17 @@ export default function SearchApp() {
               Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to show the map.
             </div>
           )}
+          <MapHud
+            loading={loading}
+            error={error}
+            result={result}
+            selected={selected}
+            selectedIndex={selectedIndex}
+            onFit={() => {
+              setSelectedId(null);
+              setFitKey((k) => k + 1);
+            }}
+          />
         </section>
       </main>
     </div>
