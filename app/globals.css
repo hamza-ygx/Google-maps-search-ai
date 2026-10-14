@@ -138,16 +138,38 @@ body {
 }
 
 .card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.card-main {
   display: block;
   width: 100%;
   padding: 12px 14px;
   text-align: left;
   font: inherit;
   color: inherit;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: none;
+  border: 0;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.card-main:focus-visible {
+  outline: 2px solid #8fb3dd;
+  outline-offset: -2px;
+}
+
+.card-links {
+  display: flex;
+  gap: 14px;
+  padding: 0 14px 10px;
+  font-size: 13px;
+}
+
+.card-links a {
+  color: var(--navy);
 }
 
 .card:hover {
@@ -221,14 +243,46 @@ body {
   font-weight: 600;
 }
 
-.badge-open {
-  color: var(--ok);
-  background: var(--ok-bg);
+.badge-muted {
+  color: var(--muted);
+  background: #e8edf3;
 }
 
-.badge-closed {
-  color: var(--bad);
-  background: var(--bad-bg);
+.disclaimer {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.leaflet-host {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.leaflet-marker-icon.pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--navy);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(15, 34, 56, 0.4);
+}
+
+.leaflet-marker-icon.pin-active {
+  background: var(--accent);
+}
+
+.leaflet-container {
+  font: inherit;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px;
 }
 
 .tip {

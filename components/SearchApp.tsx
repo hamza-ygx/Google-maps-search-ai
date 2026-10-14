@@ -1,76 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  APIProvider,
-  AdvancedMarker,
-  InfoWindow,
-  Map as GoogleMap,
-  Pin,
-  useMap,
-} from "@vis.gl/react-google-maps";
-import type { Place, SearchResponse } from "@/lib/types";
+import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import type { SearchResponse } from "@/lib/types";
+import { safeUrl } from "@/lib/url";
 import MapHud from "./MapHud";
 
-const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
-const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID";
+const MapView = dynamic(() => import("./MapView"), {
+  ssr: false,
+  loading: () => <div className="empty map-missing">Loading map…</div>,
+});
 
 const EXAMPLES = [
   "cafes in Halmstad",
   "vegan restaurants in Gothenburg",
   "pharmacy open late in Malmö",
 ];
-
-function safeUrl(u: string | null): string | null {
-  if (!u) return null;
-  try {
-    const { protocol } = new URL(u);
-    return protocol === "https:" || protocol === "http:" ? u : null;
-  } catch {
-    return null;
-  }
-}
-
-function todayHours(p: Place): string | null {
-  const line = p.weekdayHours[(new Date().getDay() + 6) % 7];
-  if (!line) return null;
-  const i = line.indexOf(": ");
-  return i >= 0 ? line.slice(i + 2) : line;
-}
-
-function Status({ place }: { place: Place }) {
-  if (place.openNow === null) return null;
-  return (
-    <span className={place.openNow ? "badge badge-open" : "badge badge-closed"}>
-      {place.openNow ? "Open now" : "Closed now"}
-    </span>
-  );
-}
-
-function ViewportController({
-  places,
-  selected,
-  fitKey,
-}: {
-  places: Place[];
-  selected: Place | null;
-  fitKey: number;
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!map || places.length === 0) return;
-    const bounds = new google.maps.LatLngBounds();
-    places.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
-    map.fitBounds(bounds, 64);
-  }, [map, places, fitKey]);
-
-  useEffect(() => {
-    if (map && selected) map.panTo({ lat: selected.lat, lng: selected.lng });
-  }, [map, selected]);
-
-  return null;
-}
 
 export default function SearchApp() {
   const [q, setQ] = useState("");
@@ -172,12 +117,16 @@ export default function SearchApp() {
 
           <ol className="list">
             {places.map((p, i) => {
-              const hours = todayHours(p);
+              const website = safeUrl(p.website);
+              const source = safeUrl(p.source);
               return (
-                <li key={p.id}>
+                <li
+                  key={p.id}
+                  className={p.id === selectedId ? "card card-active" : "card"}
+                >
                   <button
                     type="button"
-                    className={p.id === selectedId ? "card card-active" : "card"}
+                    className="card-main"
                     onClick={() => setSelectedId(p.id)}
                   >
                     <div className="card-head">
@@ -192,13 +141,31 @@ export default function SearchApp() {
                         </span>
                       )}
                     </div>
-                    <div className="address">{p.address}</div>
-                    <div className="meta">
-                      <Status place={p} />
-                      {hours && <span className="hours">Today {hours}</span>}
-                    </div>
+                    {p.address && <div className="address">{p.address}</div>}
+                    {(p.hours || p.lat === null) && (
+                      <div className="meta">
+                        {p.hours && <span className="hours">{p.hours}</span>}
+                        {p.lat === null && (
+                          <span className="badge badge-muted">Not on map</span>
+                        )}
+                      </div>
+                    )}
                     {p.tip && <div className="tip">{p.tip}</div>}
                   </button>
+                  {(website || source) && (
+                    <div className="card-links">
+                      {website && (
+                        <a href={website} target="_blank" rel="noopener noreferrer">
+                          Website
+                        </a>
+                      )}
+                      {source && (
+                        <a href={source} target="_blank" rel="noopener noreferrer">
+                          Source
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -207,82 +174,22 @@ export default function SearchApp() {
           {result && places.length === 0 && (
             <div className="empty">No places found. Try a broader search.</div>
           )}
+
+          {result && places.length > 0 && (
+            <p className="disclaimer">
+              Found by AI web search. Ratings and hours may be out of date;
+              check the source.
+            </p>
+          )}
         </section>
 
         <section className="map">
-          {MAPS_KEY ? (
-            <APIProvider apiKey={MAPS_KEY}>
-              <GoogleMap
-                mapId={MAP_ID}
-                defaultCenter={{ lat: 59.33, lng: 18.07 }}
-                defaultZoom={5}
-                gestureHandling="greedy"
-                disableDefaultUI={false}
-                mapTypeControl={false}
-                streetViewControl={false}
-                fullscreenControl={false}
-              >
-                <ViewportController
-                  places={places}
-                  selected={selected}
-                  fitKey={fitKey}
-                />
-                {places.map((p) => (
-                  <AdvancedMarker
-                    key={p.id}
-                    position={{ lat: p.lat, lng: p.lng }}
-                    title={p.name}
-                    onClick={() => setSelectedId(p.id)}
-                  >
-                    <Pin
-                      background={p.id === selectedId ? "#b45309" : "#1e3a5f"}
-                      borderColor="#0f2238"
-                      glyphColor="#ffffff"
-                    />
-                  </AdvancedMarker>
-                ))}
-                {selected && (
-                  <InfoWindow
-                    position={{ lat: selected.lat, lng: selected.lng }}
-                    pixelOffset={[0, -42]}
-                    onCloseClick={() => setSelectedId(null)}
-                    headerContent={<strong>{selected.name}</strong>}
-                  >
-                    <div className="info">
-                      {selected.rating !== null && (
-                        <div>★ {selected.rating.toFixed(1)}</div>
-                      )}
-                      {selected.tip && <p>{selected.tip}</p>}
-                      <div className="info-links">
-                        {safeUrl(selected.website) && (
-                          <a
-                            href={safeUrl(selected.website)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Website
-                          </a>
-                        )}
-                        {safeUrl(selected.mapsUrl) && (
-                          <a
-                            href={safeUrl(selected.mapsUrl)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Open in Google Maps
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </InfoWindow>
-                )}
-              </GoogleMap>
-            </APIProvider>
-          ) : (
-            <div className="empty map-missing">
-              Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to show the map.
-            </div>
-          )}
+          <MapView
+            places={places}
+            selectedId={selectedId}
+            fitKey={fitKey}
+            onSelect={setSelectedId}
+          />
           <MapHud
             loading={loading}
             error={error}

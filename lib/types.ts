@@ -8,22 +8,17 @@ export type Place = {
   id: string;
   name: string;
   address: string;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   rating: number | null;
   ratingCount: number | null;
-  openNow: boolean | null;
-  weekdayHours: string[];
+  hours: string | null;
   website: string | null;
-  mapsUrl: string | null;
+  source: string | null;
   tip: string;
 };
 
-export type Candidate = {
-  place: Omit<Place, "tip">;
-  reviews: string[];
-  summary: string | null;
-};
+export type Found = Omit<Place, "id" | "lat" | "lng">;
 
 export type SearchResponse = {
   query: ParsedQuery;

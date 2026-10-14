@@ -29,8 +29,7 @@ export default function MapHud({
   const avg = rated.length
     ? rated.reduce((sum, p) => sum + (p.rating ?? 0), 0) / rated.length
     : null;
-  const known = places.filter((p) => p.openNow !== null);
-  const open = known.filter((p) => p.openNow).length;
+  const mapped = places.filter((p) => p.lat !== null).length;
 
   const status: Status = loading
     ? "busy"
@@ -75,15 +74,15 @@ export default function MapHud({
                   <dd>{avg !== null ? `★ ${avg.toFixed(1)}` : "–"}</dd>
                 </div>
                 <div>
-                  <dt>Open now</dt>
-                  <dd>{known.length ? `${open}/${known.length}` : "–"}</dd>
+                  <dt>On map</dt>
+                  <dd>{places.length ? `${mapped}/${places.length}` : "–"}</dd>
                 </div>
               </dl>
             </>
           ) : (
             <div className="hud-hint">
               {loading
-                ? "Finding places and writing tips…"
+                ? "Searching the web and mapping results. This can take up to a minute."
                 : "Search for a type of place in a city."}
             </div>
           )}
