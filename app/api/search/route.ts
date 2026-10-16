@@ -13,6 +13,7 @@ const fail = (status: number, error: string) =>
   NextResponse.json({ error }, { status });
 
 export async function POST(req: Request) {
+  const started = Date.now();
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (!allow(ip)) {
@@ -42,12 +43,13 @@ export async function POST(req: Request) {
     }
 
     const found = await researchPlaces(parsed, q);
+    const deadline = Math.min(Date.now() + 20_000, started + 52_000);
 
     const places: Place[] = [];
     for (const [i, f] of found.entries()) {
       const point =
-        (f.address && (await geocode(f.address))) ||
-        (await geocode(`${f.name}, ${parsed.location}`));
+        (f.address && (await geocode(f.address, deadline))) ||
+        (await geocode(`${f.name}, ${parsed.location}`, deadline));
       places.push({
         ...f,
         id: `p${i}`,
